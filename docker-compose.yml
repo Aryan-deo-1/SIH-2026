@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: packcheck_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: packcheck
+      POSTGRES_PASSWORD: packcheck_password
+      POSTGRES_DB: packcheck_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U packcheck -d packcheck_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: packcheck_backend
+    restart: unless-stopped
+    environment:
+      PORT: 5000
+      NODE_ENV: production
+      DATABASE_URL: postgresql://packcheck:packcheck_password@postgres:5432/packcheck_db?schema=public
+      JWT_SECRET: packcheck_jwt_super_secret_key_2025
+      EXTERNAL_PRODUCT_API_URL: https://world.openfoodfacts.org/api/v2
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: packcheck_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

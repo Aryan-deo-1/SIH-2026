@@ -1,0 +1,228 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String          @id @default(uuid())
+  name         String
+  email        String          @unique
+  passwordHash String
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  preferences  UserPreference?
+  scans        Scan[]
+
+  @@map("users")
+}
+
+model UserPreference {
+  id                  String   @id @default(uuid())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dietType            String   @default("General") // Vegan, Vegetarian, Keto, Diabetic-friendly, General
+  preferredCategories String[] @default([])
+  avoidIngredients    String[] @default([])
+  maxSugar            Float?
+  maxSodium           Float?
+  minProtein          Float?
+  budget              Float?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("user_preferences")
+}
+
+model Product {
+  id                String                 @id @default(uuid())
+  name              String
+  brand             String
+  category          String
+  manufacturer      String?
+  barcodeGtIN       String?                @unique
+  packSize          String?
+  price             Float?
+  imageUrl          String?
+  countryOfOrigin   String?                @default("India")
+  sourceType        String                 @default("INTERNAL") // INTERNAL, EXTERNAL_CACHE, USER_SUBMISSION
+  sourceName        String?                @default("PackCheck DB")
+  externalProductId String?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  nutrition            Nutrition?
+  ingredient           Ingredient?
+  certifications       Certification[]
+  verificationEvidence VerificationEvidence[]
+  complianceChecks     ComplianceCheck[]
+  scans                Scan[]
+  externalCache        ExternalProductCache[]
+  
+  // Recommendations where this product is source
+  recommendationsAsSource    Recommendation[] @relation("SourceProduct")
+  // Recommendations where this product is candidate
+  recommendationsAsCandidate Recommendation[] @relation("CandidateProduct")
+
+  @@index([barcodeGtIN])
+  @@index([name])
+  @@index([brand])
+  @@index([category])
+  @@map("products")
+}
+
+model Nutrition {
+  id                 String   @id @default(uuid())
+  productId          String   @unique
+  product            Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  servingSize        String?  @default("100g")
+  calories           Float?
+  protein            Float?
+  carbohydrates      Float?
+  sugar              Float?
+  addedSugar         Float?
+  fat                Float?
+  saturatedFat       Float?
+  transFat           Float?
+  fiber              Float?
+  sodium             Float? // in mg
+  vitaminA           Float?
+  vitaminC           Float?
+  vitaminD           Float?
+  calcium            Float?
+  iron               Float?
+  otherNutrientsJson Json?
+
+  @@index([productId])
+  @@map("nutritions")
+}
+
+model Ingredient {
+  id             String   @id @default(uuid())
+  productId      String   @unique
+  product        Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  ingredientText String
+  allergensJson  Json?
+
+  @@index([productId])
+  @@map("ingredients")
+}
+
+model Certification {
+  id          String    @id @default(uuid())
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  type        String    // Organic, Non-GMO, Halal, Kosher, ISO, Agmark, Jaivik Bharat
+  identifier  String
+  status      String    // Active, Expired, Pending, Verified
+  source      String?
+  checkedAt   DateTime? @default(now())
+  evidenceUrl String?
+
+  @@index([productId])
+  @@map("certifications")
+}
+
+model VerificationEvidence {
+  id           String    @id @default(uuid())
+  productId    String
+  product      Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  authority    String    // FSSAI, Legal Metrology, Agmark, BIS, FoSCoS
+  identifier   String    // e.g. 14-digit FSSAI License: 10012022000234
+  status       String    // Verified, Needs Review, Mismatch, Verification Unavailable, Not Found
+  evidenceType String    // LICENSE_VALIDATION, FOSCOS_RECORD, PUBLIC_LABEL_MATCH, BARCODE_GTIN_RECORD
+  sourceUrl    String?
+  checkedAt    DateTime? @default(now())
+  details      String?
+
+  @@index([productId])
+  @@index([identifier])
+  @@map("verification_evidences")
+}
+
+model Rule {
+  id          String            @id @default(uuid())
+  category    String            // ALL, Snacks, Beverages, Dairy, Cereals, etc.
+  field       String            // sugar, addedSugar, sodium, saturatedFat, transFat, protein, fiber
+  operator    String            // GT, GTE, LT, LTE, EQ, CONTAINS
+  threshold   Float
+  severity    String            // LOW, MEDIUM, HIGH, CRITICAL, POSITIVE
+  message     String
+  source      String            @default("FSSAI / ICMR Dietary Guidelines")
+  active      Boolean           @default(true)
+  compliance  ComplianceCheck[]
+
+  @@map("rules")
+}
+
+model ComplianceCheck {
+  id        String   @id @default(uuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  ruleId    String
+  rule      Rule     @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  status    String   // COMPLIANT, NON_COMPLIANT, WARNING, EXEMPT
+  reason    String
+  evidence  String?
+  checkedAt DateTime @default(now())
+
+  @@index([productId])
+  @@index([ruleId])
+  @@map("compliance_checks")
+}
+
+model Scan {
+  id            String   @id @default(uuid())
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  imagePath     String?
+  barcode       String?
+  rawOcr        String?
+  extractedJson Json?
+  productId     String?
+  product       Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([productId])
+  @@index([barcode])
+  @@map("scans")
+}
+
+model Recommendation {
+  id                 String   @id @default(uuid())
+  sourceProductId    String
+  sourceProduct      Product  @relation("SourceProduct", fields: [sourceProductId], references: [id], onDelete: Cascade)
+  candidateProductId String
+  candidateProduct   Product  @relation("CandidateProduct", fields: [candidateProductId], references: [id], onDelete: Cascade)
+  nutritionScore     Float
+  preferenceScore    Float
+  priceScore         Float
+  categoryScore      Float
+  verificationScore  Float
+  totalScore         Float
+  reason             String
+  createdAt          DateTime @default(now())
+
+  @@index([sourceProductId])
+  @@index([candidateProductId])
+  @@map("recommendations")
+}
+
+model ExternalProductCache {
+  id              String   @id @default(uuid())
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  provider        String   // OPEN_FOOD_FACTS, USDA, MOCK_PROVIDER
+  externalId      String
+  rawResponseJson Json
+  retrievedAt     DateTime @default(now())
+  expiresAt       DateTime
+
+  @@index([productId])
+  @@index([externalId])
+  @@map("external_product_cache")
+}
