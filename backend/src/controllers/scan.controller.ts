@@ -59,23 +59,37 @@ export class ScanController {
         }
       }
 
-      // Priority 2: If barcode missing or not found, search Open Food Facts by extracted Brand + Product Name
-      if (!product && ocrFields && (ocrFields.name || ocrFields.brand)) {
-        const candidateName = ocrFields.name || '';
-        const candidateBrand = ocrFields.brand || '';
-        console.log(`[ScanController] Priority 2: Searching Open Food Facts for brand="${candidateBrand}", name="${candidateName}"...`);
-        const searchMatches = await externalProductService.searchByName(candidateName, candidateBrand);
-        if (searchMatches && searchMatches.length > 0) {
-          product = searchMatches[0];
-          resolvedVia = 'EXTERNAL_API';
-          console.log(`[ScanController] Priority 2 resolved product: "${product.name}" (${product.brand})`);
+      // Priority 2: Look up in local database using extracted OCR fields
+      if (!product && ocrFields) {
+        console.log('[ScanController] Priority 2: Searching local database via findProductByOcr...');
+        const dbResult = await dbService.findProductByOcr(ocrFields);
+        if (dbResult && dbResult.product) {
+          product = ProductService.formatProductRecord(dbResult.product);
+          resolvedVia = 'INTERNAL_DB';
+          console.log(`[ScanController] Priority 2 resolved product: "${product.name}" (${product.brand}) via INTERNAL_DB`);
         }
       }
 
-      // Priority 3: If not found in Open Food Facts, but OCR extracted nutrition or ingredients
-      // Construct an OCR-derived analysis with clear provenance warning
-      if (!product && ocrFields && (ocrFields.nutrition || ocrFields.ingredientsText)) {
-        console.log('[ScanController] Priority 3: Constructing product from package OCR data...');
+      // Priority 3: If still not found, search Open Food Facts by extracted Brand + Product Name
+      if (!product && ocrFields && (ocrFields.name || ocrFields.brand)) {
+        const candidateName = ocrFields.name || '';
+        const candidateBrand = ocrFields.brand || '';
+        console.log(`[ScanController] Priority 3: Searching Open Food Facts for brand="${candidateBrand}", name="${candidateName}"...`);
+        try {
+          const searchMatches = await externalProductService.searchByName(candidateName, candidateBrand);
+          if (searchMatches && searchMatches.length > 0) {
+            product = searchMatches[0];
+            resolvedVia = 'EXTERNAL_API';
+            console.log(`[ScanController] Priority 3 resolved product: "${product.name}" (${product.brand})`);
+          }
+        } catch (extErr: any) {
+          console.warn('[ScanController] Open Food Facts search failed or timed out:', extErr.message);
+        }
+      }
+
+      // Priority 4: If not found in DB or Open Food Facts, construct OCR-derived product from package OCR data
+      if (!product && ocrFields && (ocrFields.name || ocrFields.brand || ocrFields.rawText || ocrFields.mrp || ocrFields.nutrition || ocrFields.ingredientsText)) {
+        console.log('[ScanController] Priority 4: Constructing product from package OCR data...');
         resolvedVia = 'OCR_ONLY';
         const verification = ocrFields.fssaiNumber
           ? VerificationService.createVerificationObject(ocrFields.fssaiNumber)
@@ -84,15 +98,15 @@ export class ScanController {
         const ocrProduct: Partial<StandardProduct> = {
           name: ocrFields.name || (ocrFields.brand ? `${ocrFields.brand} Product` : 'Scanned Package Item'),
           brand: ocrFields.brand || 'Unbranded / Scanned',
-          category: 'Snacks',
+          category: ocrFields.commodityName || 'Snacks',
           manufacturer: ocrFields.manufacturer,
           barcodeGtIN: detectedBarcode || undefined,
-          packSize: ocrFields.packSize || '100g',
-          price: ocrFields.price,
+          packSize: ocrFields.packSize || ocrFields.netQuantity || '100g',
+          price: ocrFields.price || ocrFields.mrpNumeric,
           imageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
           sourceType: 'OCR_PARSED',
           sourceName: 'OCR / Package Image',
-          provenanceNote: 'Product identity could not be fully verified against official databases. Analysis is based purely on package text extracted via OCR.',
+          provenanceNote: 'Product identity was not matched in the verified catalog. Analysis and Legal Metrology compliance are evaluated directly from the extracted package declarations.',
           nutrition: ocrFields.nutrition,
           ingredient: {
             ingredientText: ocrFields.ingredientsText || 'Extracted from packaging',
@@ -105,22 +119,22 @@ export class ScanController {
         product = ProductService.formatProductRecord(saved);
       }
 
-      // Priority 4: Not found anywhere -> Clean 404 (NEVER return random or pre-seeded product)
+      // Priority 5: Not found anywhere and OCR could not extract anything -> Friendly error
       if (!product) {
-        console.log('[ScanController] Priority 4: Product not found. Returning 404.');
+        console.log('[ScanController] Priority 5: Unreadable image / no text extracted. Returning 404.');
         return res.status(404).json({
           success: false,
           found: false,
           source: null,
           error: {
-            message: 'Product could not be identified from barcode or image. No matching product found in database or Open Food Facts. Try uploading a clearer label image or searching manually.'
+            message: 'Unable to read the image. Please upload a clearer product-label image.'
           }
         });
       }
 
       // 5. Analyze product
       const userPreferences = req.body.preferences;
-      const analysis = await ProductService.analyzeProduct(product, userPreferences);
+      const analysis = await ProductService.analyzeProduct(product, userPreferences, ocrFields);
 
       // 6. Record to scan history
       await dbService.recordScan({
@@ -133,6 +147,7 @@ export class ScanController {
 
       return res.json({
         success: true,
+        found: resolvedVia !== 'OCR_ONLY',
         data: {
           ...analysis,
           scanMeta: {
@@ -162,9 +177,23 @@ export class ScanController {
       }
 
       const extracted = await OCRService.processImage(req.file.buffer);
+      if (!extracted || !extracted.rawText || extracted.rawText.trim().length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: { message: 'Unable to read the image. Please upload a clearer product-label image.' }
+        });
+      }
+
+      // Check if product matches any known item in DB
+      const matchedDbResult = await dbService.findProductByOcr(extracted);
+      const product = matchedDbResult && matchedDbResult.product ? ProductService.formatProductRecord(matchedDbResult.product) : null;
+
       return res.json({
         success: true,
-        data: extracted
+        ocrText: extracted.rawText,
+        extracted,
+        product,
+        matchType: product ? (matchedDbResult?.matchType || 'database') : 'ocr_only'
       });
     } catch (error: any) {
       return res.status(500).json({ success: false, error: { message: error.message || 'OCR processing failed' } });

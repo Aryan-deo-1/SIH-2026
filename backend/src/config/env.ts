@@ -3,6 +3,7 @@ dotenv.config();
 
 export const ENV = {
   PORT: parseInt(process.env.PORT || '5000', 10),
+  HOST: process.env.HOST || '0.0.0.0',
   NODE_ENV: process.env.NODE_ENV || 'development',
   DATABASE_URL: process.env.DATABASE_URL || 'postgresql://packcheck:packcheck_password@localhost:5432/packcheck_db?schema=public',
   JWT_SECRET: process.env.JWT_SECRET || 'packcheck_jwt_secret_dev_key_2025_secure',

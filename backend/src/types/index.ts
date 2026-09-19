@@ -147,12 +147,99 @@ export interface DietFilterParams {
   sortBy?: 'score' | 'protein' | 'price_asc' | 'calories_asc';
 }
 
+export interface LegalMetrologyCheckItem {
+  ruleId: string;
+  ruleCode: string;
+  requirement: string;
+  status: 'PASS' | 'FAIL' | 'REVIEW' | 'NOT_APPLICABLE';
+  detectedValue?: string | null;
+  originalValue?: string | null;
+  normalizedValue?: string | null;
+  reason: string;
+  ocrConfidence: number; // 0.0 - 1.0
+  confidenceLabel: 'HIGH' | 'MODERATE' | 'LOW' | 'NOT_DETECTED';
+  mandatory: boolean;
+  legalReference: string;
+  candidateSuggestion?: string | null;
+}
+
+export interface LegalMetrologySummary {
+  totalMandatory: number;
+  passed: number;
+  failed: number;
+  review: number;
+  notApplicable: number;
+}
+
+export interface MPEResult {
+  declaredQuantity: number;
+  declaredUnit: string;
+  permissibleError: number;
+  errorUnit: string;
+  minAcceptableQuantity: number;
+  maxAcceptableQuantity: number;
+  scheduleReference: string;
+  status: 'PASS' | 'FAIL' | 'REVIEW' | 'NOT_APPLICABLE';
+  explanation: string;
+}
+
+export interface LegalMetrologyExtractedFields {
+  productName?: string;
+  commodityName?: string;
+  brand?: string;
+  manufacturer?: string;
+  manufacturerAddress?: string;
+  packer?: string;
+  packerAddress?: string;
+  importer?: string;
+  importerAddress?: string;
+  netQuantity?: string;
+  netQuantityValue?: number;
+  netQuantityUnit?: string;
+  normalizedQuantityValue?: number;
+  normalizedQuantityUnit?: string;
+  count?: number;
+  isMisleadingQuantity?: boolean;
+  misleadingReason?: string;
+  mrp?: string;
+  mrpNumeric?: number;
+  currency?: string;
+  multipleMrpDetected?: boolean;
+  allMrpValues?: string[];
+  unitSalePrice?: string;
+  manufacturingDate?: string;
+  packingDate?: string;
+  importDate?: string;
+  normalizedDate?: string;
+  consumerCarePhone?: string;
+  consumerCareEmail?: string;
+  consumerCareAddress?: string;
+  countryOfOrigin?: string;
+  dimensions?: string;
+  ocrConfidenceScores?: Record<string, number>;
+  noiseCandidates?: Array<{ field: string; raw: string; candidate: string; confidence: number; note: string }>;
+  isExempt?: boolean;
+  exemptionReason?: string;
+}
+
+export interface LegalMetrologyComplianceResult {
+  overallStatus: 'COMPLIANT' | 'PARTIALLY_COMPLIANT' | 'NON_COMPLIANT';
+  summary: LegalMetrologySummary;
+  checks: LegalMetrologyCheckItem[];
+  mpe?: MPEResult | null;
+  extractedDeclarations: LegalMetrologyExtractedFields;
+  warnings: string[];
+  exemptions: string[];
+  disclaimer: string;
+}
+
 export interface ScanResultPayload {
   product: StandardProduct;
   score: QualityScoreResult;
   warnings: WarningItem[];
   positives: PositiveItem[];
   compliance: ComplianceCheckResult[];
+  legalMetrology: LegalMetrologyComplianceResult;
   recommendations: RecommendationItem[];
   scanMeta?: {
     barcode?: string;
@@ -160,3 +247,4 @@ export interface ScanResultPayload {
     resolvedVia: 'INTERNAL_DB' | 'EXTERNAL_API' | 'OCR_ONLY' | 'MOCK_PROVIDER';
   };
 }
+

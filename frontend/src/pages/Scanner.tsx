@@ -62,10 +62,10 @@ export const Scanner: React.FC = () => {
       {/* Title */}
       <div className="text-center space-y-2">
         <h1 className="font-heading text-2xl sm:text-3xl font-extrabold text-brand-dark-text">
-          Package Scanner
+          Legal Metrology Compliance Checker
         </h1>
-        <p className="text-xs sm:text-sm text-brand-secondary-text max-w-md mx-auto">
-          Scan any barcode, EAN-13, or upload a product front/nutrition label to run instant compliance verification.
+        <p className="text-xs sm:text-sm text-brand-secondary-text max-w-lg mx-auto">
+          Scan any barcode or upload package label images to audit mandatory declarations under the <strong>Legal Metrology (Packaged Commodities) Rules, 2011</strong> & Nutrition standards.
         </p>
       </div>
 

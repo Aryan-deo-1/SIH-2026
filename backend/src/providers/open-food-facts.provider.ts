@@ -81,12 +81,12 @@ export class OpenFoodFactsProvider implements ProductProvider {
         const brandUrl = `${baseUrl}/search?brands_tags_en=${encodeURIComponent(brandSlug)}&page_size=15`;
         console.log(`[OpenFoodFacts] Searching by brand: ${brandUrl}`);
         const brandRes = await axios.get(brandUrl, {
-          timeout: 7000,
+          timeout: 5000,
           headers: { 'User-Agent': this.userAgent }
         });
 
         if (brandRes.data && Array.isArray(brandRes.data.products) && brandRes.data.products.length > 0) {
-          let candidates = brandRes.data.products.filter((p: any) => p.product_name || p.product_name_en);
+          let candidates = brandRes.data.products.filter((p: any) => p && (p.product_name || p.product_name_en));
 
           // If a specific sub-query was also provided (e.g. "classic salted"), filter or rank
           if (cleanQuery && cleanBrand && cleanQuery.toLowerCase() !== cleanBrand.toLowerCase()) {
@@ -100,9 +100,15 @@ export class OpenFoodFactsProvider implements ProductProvider {
             }
           }
 
-          const normalized = candidates.map((raw: any) =>
-            NormalizationService.normalizeExternalProduct(raw, 'Open Food Facts')
-          );
+          const normalized: StandardProduct[] = [];
+          for (const raw of candidates) {
+            try {
+              const norm = NormalizationService.normalizeExternalProduct(raw, 'Open Food Facts');
+              if (norm) normalized.push(norm);
+            } catch (err: any) {
+              console.warn('[OpenFoodFacts] Normalization warning for candidate:', err?.message || err);
+            }
+          }
           if (normalized.length > 0) return normalized;
         }
 
@@ -111,18 +117,25 @@ export class OpenFoodFactsProvider implements ProductProvider {
         const catUrl = `${baseUrl}/search?categories_tags_en=${encodeURIComponent(categorySlug)}&page_size=15`;
         console.log(`[OpenFoodFacts] Searching by category: ${catUrl}`);
         const catRes = await axios.get(catUrl, {
-          timeout: 7000,
+          timeout: 5000,
           headers: { 'User-Agent': this.userAgent }
         });
 
         if (catRes.data && Array.isArray(catRes.data.products) && catRes.data.products.length > 0) {
-          const valid = catRes.data.products
-            .filter((p: any) => p.product_name || p.product_name_en)
-            .map((raw: any) => NormalizationService.normalizeExternalProduct(raw, 'Open Food Facts'));
+          const candidates = catRes.data.products.filter((p: any) => p && (p.product_name || p.product_name_en));
+          const valid: StandardProduct[] = [];
+          for (const raw of candidates) {
+            try {
+              const norm = NormalizationService.normalizeExternalProduct(raw, 'Open Food Facts');
+              if (norm) valid.push(norm);
+            } catch (err: any) {
+              console.warn('[OpenFoodFacts] Normalization warning for category candidate:', err?.message || err);
+            }
+          }
           if (valid.length > 0) return valid;
         }
       } catch (err: any) {
-        console.warn(`[OpenFoodFacts] Search error on ${baseUrl}:`, err.response?.status || err.message);
+        console.warn(`[OpenFoodFacts] Search non-fatal error on ${baseUrl}:`, err?.response?.status || err?.code || err?.message);
       }
     }
 

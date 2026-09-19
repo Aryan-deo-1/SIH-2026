@@ -7,12 +7,12 @@ interface ProcessingAnimationProps {
 
 export const ProcessingAnimation: React.FC<ProcessingAnimationProps> = ({ currentStage = 0 }) => {
   const stages = [
-    'Reading package & label geometry',
-    'Extracting text & OCR declarations',
-    'Identifying barcode & GTIN identifier',
-    'Querying PostgreSQL & external product registries',
-    'Calculating deterministic compliance score',
-    'Evaluating better dietary alternatives'
+    'OCR optical character recognition on package label',
+    'Extracting product, manufacturer, quantity & MRP declarations',
+    'Normalizing metric measurement units & date formats',
+    'Comparing against Legal Metrology (Packaged Commodities) Rules, 2011',
+    'Detecting missing/invalid declarations & computing MPE tolerances',
+    'Generating comprehensive Legal Metrology & Health compliance report'
   ];
 
   const [activeStep, setActiveStep] = useState(currentStage);
@@ -21,7 +21,7 @@ export const ProcessingAnimation: React.FC<ProcessingAnimationProps> = ({ curren
     if (activeStep < stages.length - 1) {
       const timer = setTimeout(() => {
         setActiveStep((prev) => Math.min(prev + 1, stages.length - 1));
-      }, 500);
+      }, 600);
       return () => clearTimeout(timer);
     }
   }, [activeStep, stages.length]);
@@ -37,10 +37,10 @@ export const ProcessingAnimation: React.FC<ProcessingAnimationProps> = ({ curren
 
       <div>
         <h3 className="font-heading text-xl font-extrabold text-brand-dark-text">
-          Analyzing Product...
+          Auditing Package Declarations...
         </h3>
         <p className="text-xs text-brand-secondary-text mt-1">
-          Decoding nutritional parameters, FSSAI verification records, and compliance rules
+          Comparing OCR package declarations against the Legal Metrology (Packaged Commodities) Rules, 2011 & Nutrition benchmarks
         </p>
       </div>
 

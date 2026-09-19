@@ -1,6 +1,192 @@
 import { StandardProduct, StandardNutrition, StandardIngredient, StandardVerification } from '../types';
 
+/**
+ * Normalization Service
+ * 1. Handles external product normalization (e.g. Open Food Facts API payloads into StandardProduct)
+ * 2. Handles text normalization, case insensitivity, OCR noise correction, tokenization,
+ *    and fuzzy string matching for product search & scanning.
+ */
 export class NormalizationService {
+  // ==========================================
+  // SECTION 1: SEARCH & TEXT NORMALIZATION
+  // ==========================================
+
+  /**
+   * Cleans and standardizes a search query string.
+   * Lowercases, strips punctuation (apostrophes, quotes, dashes, etc.),
+   * and collapses consecutive whitespace.
+   * Example: "LAY'S!" -> "lays", "lays  chips" -> "lays chips"
+   */
+  public static cleanSearchQuery(query: string): string {
+    if (!query) return '';
+    return query
+      .toLowerCase()
+      .replace(/['’`"]/g, '') // remove apostrophes and quotes: Lay's -> Lays
+      .replace(/[^a-z0-9\s]/g, ' ') // replace other punctuation with space
+      .replace(/\s+/g, ' ') // collapse multiple spaces
+      .trim();
+  }
+
+  /**
+   * Splits a search string into individual clean alphanumeric tokens.
+   * Example: "Lays Classic 50g" -> ["lays", "classic", "50g"]
+   */
+  public static tokenize(text: string): string[] {
+    const cleaned = this.cleanSearchQuery(text);
+    if (!cleaned) return [];
+    return cleaned
+      .split(' ')
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0);
+  }
+
+  /**
+   * Fixes common OCR letter/digit confusions in raw text.
+   * e.g. "LAY5 CLASSlC" -> "LAYS CLASSIC"
+   * e.g. "500 9" -> "500 g"
+   */
+  public static cleanOcrText(rawText: string): string {
+    if (!rawText) return '';
+    let cleaned = rawText;
+
+    // In upper-case words: '5' often represents 'S' (e.g. LAY5 -> LAYS, 5ALTED -> SALTED)
+    cleaned = cleaned.replace(/\b([A-Z]*)(5)([A-Z]+)\b/g, '$1S$3');
+    cleaned = cleaned.replace(/\b([A-Z]+)(5)([A-Z]*)\b/g, '$1S$3');
+
+    // In upper-case words: '0' often represents 'O' (e.g. P0TAT0 -> POTATO)
+    cleaned = cleaned.replace(/\b([A-Z]*)(0)([A-Z]+)\b/g, '$1O$3');
+    cleaned = cleaned.replace(/\b([A-Z]+)(0)([A-Z]*)\b/g, '$1O$3');
+
+    // In upper-case words: '1' or '|' often represents 'I' or 'L' (e.g. CLASSlC -> CLASSIC)
+    cleaned = cleaned.replace(/\b([A-Z]*)l([A-Z]+)\b/g, '$1I$2');
+
+    // Net weight OCR substitution: "500 9" or "100 9" -> "500 g" or "100 g"
+    cleaned = cleaned.replace(/(\d+)\s*9\b/g, '$1 g');
+
+    return cleaned;
+  }
+
+  /**
+   * Computes the Levenshtein distance between two strings.
+   */
+  public static levenshteinDistance(a: string, b: string): number {
+    const matrix: number[][] = [];
+
+    for (let i = 0; i <= b.length; i++) {
+      matrix[i] = [i];
+    }
+    for (let j = 0; j <= a.length; j++) {
+      matrix[0][j] = j;
+    }
+
+    for (let i = 1; i <= b.length; i++) {
+      for (let j = 1; j <= a.length; j++) {
+        if (b.charAt(i - 1) === a.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1, // substitution
+            matrix[i][j - 1] + 1,     // insertion
+            matrix[i - 1][j] + 1      // deletion
+          );
+        }
+      }
+    }
+
+    return matrix[b.length][a.length];
+  }
+
+  /**
+   * Computes normalized similarity between two strings (0.0 to 1.0).
+   */
+  public static stringSimilarity(a: string, b: string): number {
+    const s1 = this.cleanSearchQuery(a);
+    const s2 = this.cleanSearchQuery(b);
+    if (!s1 || !s2) return 0;
+    if (s1 === s2) return 1.0;
+
+    const maxLen = Math.max(s1.length, s2.length);
+    if (maxLen === 0) return 1.0;
+
+    const dist = this.levenshteinDistance(s1, s2);
+    return Math.max(0, 1 - dist / maxLen);
+  }
+
+  /**
+   * Evaluates how well a query matches a product record.
+   * Returns a match score from 0 to 100, where >= 40 indicates a valid match.
+   */
+  public static scoreProductMatch(
+    query: string,
+    product: { name: string; brand: string; category?: string; barcodeGtIN?: string | null }
+  ): number {
+    const cleanQ = this.cleanSearchQuery(query);
+    if (!cleanQ) return 100;
+
+    const prodName = this.cleanSearchQuery(product.name);
+    const prodBrand = this.cleanSearchQuery(product.brand);
+    const prodCategory = this.cleanSearchQuery(product.category || '');
+    const barcode = (product.barcodeGtIN || '').trim();
+
+    // 1. Exact barcode match: 100
+    if (barcode && (cleanQ === barcode || query.includes(barcode))) {
+      return 100;
+    }
+
+    // 2. Exact brand match: 95
+    if (cleanQ === prodBrand) {
+      return 95;
+    }
+
+    // 3. Exact full name match: 90
+    if (cleanQ === prodName) {
+      return 90;
+    }
+
+    // 4. Product name starts with query: 85
+    if (prodName.startsWith(cleanQ) || prodBrand.startsWith(cleanQ)) {
+      return 85;
+    }
+
+    // 5. Product name contains query: 80
+    if (prodName.includes(cleanQ) || prodBrand.includes(cleanQ)) {
+      return 80;
+    }
+
+    // 6. Token-based matching: check if all query tokens appear in the product
+    const queryTokens = this.tokenize(query);
+    if (queryTokens.length > 0) {
+      const combined = `${prodName} ${prodBrand} ${prodCategory} ${barcode}`;
+      const allTokensMatch = queryTokens.every((token) => combined.includes(token));
+
+      if (allTokensMatch) {
+        return 75;
+      }
+
+      // Partial token match (e.g. 2 of 3 tokens match)
+      const matchedTokens = queryTokens.filter((token) => combined.includes(token));
+      const matchRatio = matchedTokens.length / queryTokens.length;
+      if (matchRatio >= 0.6) {
+        return Math.round(50 * matchRatio);
+      }
+    }
+
+    // 7. Fuzzy similarity on brand or name
+    const brandSim = this.stringSimilarity(cleanQ, prodBrand);
+    const nameSim = this.stringSimilarity(cleanQ, prodName);
+    const maxSim = Math.max(brandSim, nameSim);
+
+    if (maxSim >= 0.75) {
+      return Math.round(maxSim * 70);
+    }
+
+    return 0;
+  }
+
+  // ==========================================
+  // SECTION 2: OPEN FOOD FACTS NORMALIZATION
+  // ==========================================
+
   /**
    * Normalizes raw response from Open Food Facts API into StandardProduct
    */

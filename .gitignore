@@ -25,7 +25,7 @@ lerna-debug.log*
 .DS_Store
 Thumbs.db
 
-# IDE
+# IDE & Build Caches
 .idea/
 .vscode/
 *.suo
@@ -33,7 +33,9 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+*.tsbuildinfo
 
 # Uploads & Temp
 backend/uploads/*
 !backend/uploads/.gitkeep
+

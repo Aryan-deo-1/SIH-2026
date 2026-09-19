@@ -29,14 +29,17 @@ export const Search: React.FC = () => {
     setSourceNotice(null);
     try {
       const res = await api.searchManual(searchTerm, cat);
-      if (res.data) {
+      if (res && res.data && Array.isArray(res.data)) {
         setResults(res.data);
         if (res.source === 'EXTERNAL_API') {
           setSourceNotice('Item was discovered via external OpenFoodFacts global registry and cached.');
         }
+      } else {
+        setResults([]);
       }
     } catch (err) {
       console.error('Search failed', err);
+      setResults([]);
     } finally {
       setLoading(false);
     }
@@ -123,7 +126,11 @@ export const Search: React.FC = () => {
           <Layers className="w-10 h-10 text-brand-secondary-text/60 mx-auto" />
           <h3 className="font-heading text-base font-bold text-brand-dark-text">No Products Found</h3>
           <p className="text-xs text-brand-secondary-text">
-            We couldn't locate matching items for "{query}". Check spelling or try scanning the package directly.
+            {query.trim() ? (
+              <>We couldn't locate matching items for "{query}". Check spelling or try scanning the package directly.</>
+            ) : (
+              <>No products found for this filter. Try selecting another category or typing a search query.</>
+            )}
           </p>
         </div>
       )}

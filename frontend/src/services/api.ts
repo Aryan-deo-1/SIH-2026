@@ -54,6 +54,14 @@ export const api = {
     return res.data;
   },
 
+  // 5b. Unified Search Products GET endpoint
+  searchProducts: async (q: string, category?: string) => {
+    const params: any = { q };
+    if (category && category !== 'ALL') params.category = category;
+    const res = await apiClient.get('/products/search', { params });
+    return res.data;
+  },
+
   // 6. Diet Finder Search
   searchDiet: async (params: DietFilterParams): Promise<DietFinderResult[]> => {
     const res = await apiClient.post('/search/diet', params);
@@ -90,5 +98,22 @@ export const api = {
   getRules: async () => {
     const res = await apiClient.get('/admin/rules');
     return res.data.data;
+  },
+
+  // 10. Legal Metrology Compliance (Rules 2011)
+  checkCompliance: async (productData: any) => {
+    const res = await apiClient.post('/compliance/check', { productData });
+    return res.data.data;
+  },
+
+  getLegalMetrologyRules: async () => {
+    const res = await apiClient.get('/compliance/rules');
+    return res.data.data;
+  },
+
+  getComplianceResult: async (id: string) => {
+    const res = await apiClient.get(`/compliance/results/${id}`);
+    return res.data.data;
   }
 };
+

@@ -5,7 +5,13 @@ import { WarningService } from './warning.service';
 import { PositivesService } from './positives.service';
 import { RecommendationService } from './recommendation.service';
 import { VerificationService } from './verification.service';
-import { StandardProduct, ScanResultPayload, ComplianceCheckResult } from '../types';
+import { LegalMetrologyComplianceEngine } from './complianceEngine';
+import {
+  StandardProduct,
+  ScanResultPayload,
+  ComplianceCheckResult,
+  LegalMetrologyExtractedFields
+} from '../types';
 
 export class ProductService {
   /**
@@ -36,9 +42,15 @@ export class ProductService {
   }
 
   /**
-   * Performs full analysis: Quality Score, Warnings, Positives, Compliance, Recommendations
+   * Performs full analysis:
+   * A. Health & Nutrition Analysis (Quality Score, Warnings, Positives, Recommendations)
+   * B. Legal Metrology Compliance (Rules 2011, Net Qty, MRP, MFD/PKD, Consumer Care, MPE)
    */
-  public static async analyzeProduct(product: StandardProduct, userPreferences?: any): Promise<ScanResultPayload> {
+  public static async analyzeProduct(
+    product: StandardProduct,
+    userPreferences?: any,
+    ocrFields?: any
+  ): Promise<ScanResultPayload> {
     // 1. Quality score
     const score = await ScoringService.calculateQualityScore(product.nutrition);
 
@@ -48,7 +60,7 @@ export class ProductService {
     // 3. Positives
     const positives = PositivesService.generatePositives(product);
 
-    // 4. Compliance against rules
+    // 4. Compliance against nutrition / dietary rules (FSSAI/ICMR)
     const rules = await dbService.getRules();
     const compliance: ComplianceCheckResult[] = [];
     const nut = product.nutrition as any;
@@ -95,7 +107,47 @@ export class ProductService {
       }
     }
 
-    // 5. Recommendations
+    // 5. Legal Metrology (Packaged Commodities) Rules, 2011 Compliance Engine
+    const lmData: Partial<LegalMetrologyExtractedFields> = {
+      productName: ocrFields?.name || product.name,
+      commodityName: ocrFields?.commodityName || product.name,
+      brand: ocrFields?.brand || product.brand,
+      manufacturer: ocrFields?.manufacturer || product.manufacturer,
+      manufacturerAddress: ocrFields?.manufacturerAddress,
+      packer: ocrFields?.packer,
+      packerAddress: ocrFields?.packerAddress,
+      importer: ocrFields?.importer,
+      importerAddress: ocrFields?.importerAddress,
+      netQuantity: ocrFields?.netQuantity || product.packSize,
+      mrp: ocrFields?.mrp || (product.price ? `₹${product.price}` : undefined),
+      mrpNumeric: ocrFields?.mrpNumeric || product.price,
+      currency: 'INR',
+      multipleMrpDetected: ocrFields?.multipleMrpDetected || false,
+      allMrpValues: ocrFields?.allMrpValues,
+      unitSalePrice: ocrFields?.unitSalePrice,
+      manufacturingDate: ocrFields?.manufacturingDate,
+      packingDate: ocrFields?.packingDate,
+      importDate: ocrFields?.importDate,
+      normalizedDate: ocrFields?.normalizedDate,
+      consumerCarePhone: ocrFields?.consumerCarePhone,
+      consumerCareEmail: ocrFields?.consumerCareEmail,
+      consumerCareAddress: ocrFields?.consumerCareAddress,
+      countryOfOrigin: ocrFields?.countryOfOrigin || product.countryOfOrigin,
+      dimensions: ocrFields?.dimensions,
+      ocrConfidenceScores: ocrFields?.ocrConfidenceScores,
+      noiseCandidates: ocrFields?.noiseCandidates
+    };
+
+    const legalMetrology = LegalMetrologyComplianceEngine.evaluateProduct(lmData);
+
+    // Save compliance result to DB
+    try {
+      await dbService.saveComplianceResult(legalMetrology, product.id);
+    } catch (e) {
+      console.warn('[ProductService] Could not persist compliance result:', e);
+    }
+
+    // 6. Recommendations
     const recommendations = await RecommendationService.getRecommendations(product, userPreferences);
 
     return {
@@ -104,6 +156,7 @@ export class ProductService {
       warnings,
       positives,
       compliance,
+      legalMetrology,
       recommendations
     };
   }

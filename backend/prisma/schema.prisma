@@ -59,6 +59,7 @@ model Product {
   certifications       Certification[]
   verificationEvidence VerificationEvidence[]
   complianceChecks     ComplianceCheck[]
+  complianceResults    ComplianceResult[]
   scans                Scan[]
   externalCache        ExternalProductCache[]
   
@@ -226,3 +227,67 @@ model ExternalProductCache {
   @@index([externalId])
   @@map("external_product_cache")
 }
+
+model LegalMetrologyRule {
+  id                    String                @id @default(uuid())
+  ruleCode              String                @unique // RULE_6_1_A, RULE_6_1_B, etc.
+  requirementName       String
+  description           String
+  mandatory             Boolean               @default(true)
+  validationType        String                // EXISTS, FORMAT, UNIT_METRIC, MPE, DATE, CONTACT
+  legalReference        String
+  categoryApplicability String                @default("ALL")
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  complianceChecks      ComplianceCheckItem[]
+
+  @@map("legal_metrology_rules")
+}
+
+model ComplianceResult {
+  id                    String                @id @default(uuid())
+  productId             String?
+  product               Product?              @relation(fields: [productId], references: [id], onDelete: SetNull)
+  scanId                String?
+  overallStatus         String                // COMPLIANT, PARTIALLY_COMPLIANT, NON_COMPLIANT
+  totalMandatory        Int
+  passedCount           Int
+  failedCount           Int
+  reviewCount           Int
+  notApplicableCount    Int
+  mpeJson               Json?
+  extractedDeclarations Json?
+  warningsJson          Json?
+  scanDate              DateTime              @default(now())
+  createdAt             DateTime              @default(now())
+  checkItems            ComplianceCheckItem[]
+
+  @@index([productId])
+  @@index([scanId])
+  @@map("compliance_results")
+}
+
+model ComplianceCheckItem {
+  id                 String              @id @default(uuid())
+  complianceResultId String
+  complianceResult   ComplianceResult    @relation(fields: [complianceResultId], references: [id], onDelete: Cascade)
+  ruleId             String?
+  rule               LegalMetrologyRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  ruleCode           String
+  requirement        String
+  detectedValue      String?
+  originalValue      String?
+  normalizedValue    String?
+  status             String              // PASS, FAIL, REVIEW, NOT_APPLICABLE
+  reason             String
+  ocrConfidence      Float               @default(1.0)
+  confidenceLabel    String              @default("HIGH")
+  mandatory          Boolean             @default(true)
+  legalReference     String
+  createdAt          DateTime            @default(now())
+
+  @@index([complianceResultId])
+  @@index([ruleId])
+  @@map("compliance_check_items")
+}
+

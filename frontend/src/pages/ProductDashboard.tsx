@@ -9,6 +9,8 @@ import { WarningCard } from '../components/WarningCard';
 import { PositivesCard } from '../components/PositivesCard';
 import { RecommendationCard } from '../components/RecommendationCard';
 import { ComplianceCard } from '../components/ComplianceCard';
+import { LegalMetrologyComplianceCard } from '../components/LegalMetrologyComplianceCard';
+import { ExtractedDeclarationsCard } from '../components/ExtractedDeclarationsCard';
 import {
   ArrowLeft,
   ScanLine,
@@ -23,7 +25,10 @@ import {
   Barcode,
   Database,
   ExternalLink,
-  AlertTriangle
+  AlertTriangle,
+  Scale,
+  HeartPulse,
+  FileCheck2
 } from 'lucide-react';
 
 export const ProductDashboard: React.FC = () => {
@@ -222,12 +227,59 @@ export const ProductDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Dashboard Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Score, Warnings & Positives */}
-        <div className="lg:col-span-5 space-y-6">
-          {/* Data Source & Provenance Card */}
-          <div className="bg-white rounded-2xl border border-brand-border p-5 shadow-soft space-y-3">
+      {/* ========================================================================= */}
+      {/* SECTION A: LEGAL METROLOGY (PACKAGED COMMODITIES) RULES, 2011 COMPLIANCE  */}
+      {/* ========================================================================= */}
+      <section className="space-y-6">
+        <div className="flex items-center gap-2.5 pb-1">
+          <div className="w-8 h-8 rounded-xl bg-brand-soft-orange flex items-center justify-center text-brand-primary-orange">
+            <Scale className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="font-heading text-lg sm:text-xl font-extrabold text-brand-dark-text">
+              Part A: Legal Metrology Declarations Audit
+            </h2>
+            <p className="text-xs text-brand-secondary-text">
+              Deterministic rule comparison under the Legal Metrology Act, 2009 & Packaged Commodities Rules, 2011
+            </p>
+          </div>
+        </div>
+
+        {/* Legal Metrology Compliance Card */}
+        {data.legalMetrology && (
+          <LegalMetrologyComplianceCard compliance={data.legalMetrology} />
+        )}
+
+        {/* Extracted Package Declarations Card */}
+        {data.legalMetrology?.extractedDeclarations && (
+          <ExtractedDeclarationsCard declarations={data.legalMetrology.extractedDeclarations} />
+        )}
+      </section>
+
+      {/* ========================================================================= */}
+      {/* SECTION B: HEALTH & NUTRITIONAL ANALYSIS                                   */}
+      {/* ========================================================================= */}
+      <section className="space-y-6 pt-4 border-t-2 border-brand-border/60">
+        <div className="flex items-center gap-2.5 pb-1">
+          <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+            <HeartPulse className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="font-heading text-lg sm:text-xl font-extrabold text-brand-dark-text">
+              Part B: Health & Nutritional Analysis
+            </h2>
+            <p className="text-xs text-brand-secondary-text">
+              FSSAI & ICMR dietary benchmarks, quality score, additives, and allergen alerts
+            </p>
+          </div>
+        </div>
+
+        {/* Main Dashboard Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left Column: Score, Warnings & Positives */}
+          <div className="lg:col-span-5 space-y-6">
+            {/* Data Source & Provenance Card */}
+            <div className="bg-white rounded-2xl border border-brand-border p-5 shadow-soft space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-brand-border/60">
               <div className="flex items-center gap-2">
                 <Database className="w-4 h-4 text-brand-primary-orange" />
@@ -339,6 +391,46 @@ export const ProductDashboard: React.FC = () => {
           <ComplianceCard compliance={compliance} />
         </div>
       </div>
+      </section>
+
+      {/* Issues Found & Compliance Recommendations */}
+      {data.legalMetrology && (data.legalMetrology.checks.some(c => c.status === 'FAIL' || c.status === 'REVIEW') || data.legalMetrology.warnings.length > 0) && (
+        <section className="bg-amber-50/70 border-2 border-amber-200 rounded-3xl p-5 sm:p-7 space-y-4 shadow-soft">
+          <div className="flex items-center gap-2 text-amber-950 font-bold text-sm">
+            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+            <h3 className="font-heading text-base font-extrabold">Issues & Discrepancies Identified</h3>
+          </div>
+
+          <div className="space-y-2 text-xs text-amber-900">
+            <ul className="list-disc pl-5 space-y-1.5 leading-relaxed">
+              {data.legalMetrology.checks
+                .filter(c => c.status === 'FAIL' || c.status === 'REVIEW')
+                .map((issue, i) => (
+                  <li key={i}>
+                    <strong>{issue.requirement}:</strong> {issue.reason}
+                    {issue.candidateSuggestion && (
+                      <span className="block text-[11px] text-amber-800 font-semibold mt-0.5">
+                        OCR candidate note: {issue.candidateSuggestion}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              {data.legalMetrology.warnings.map((w, i) => (
+                <li key={`warn-${i}`} className="text-rose-900 font-medium">
+                  {w}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="pt-3 border-t border-amber-200/80 flex items-start gap-2.5 text-xs text-amber-950">
+            <FileCheck2 className="w-4 h-4 text-brand-primary-orange shrink-0 mt-0.5" />
+            <p className="leading-relaxed">
+              <strong>Recommendation:</strong> Verify the physical package before making a final compliance determination. Automated OCR text extraction provides a preliminary audit and does not replace official legal inspection under the Legal Metrology Act, 2009.
+            </p>
+          </div>
+        </section>
+      )}
 
       {/* Recommendations Section: Better Alternatives */}
       {recommendations && recommendations.length > 0 && (
@@ -348,7 +440,7 @@ export const ProductDashboard: React.FC = () => {
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-brand-primary-orange" />
                 <h2 className="font-heading text-xl sm:text-2xl font-extrabold text-brand-dark-text">
-                  Better Alternatives
+                  Better Nutritional Alternatives
                 </h2>
               </div>
               <p className="text-xs text-brand-secondary-text mt-0.5">
