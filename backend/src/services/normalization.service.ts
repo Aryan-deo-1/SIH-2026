@@ -332,11 +332,11 @@ export class NormalizationService {
     if (text.includes('cereal') || text.includes('oat') || text.includes('muesli') || text.includes('flake') || text.includes('granola')) {
       return 'Cereal';
     }
-    if (text.includes('milk') || text.includes('dairy') || text.includes('almond milk') || text.includes('soya milk') || text.includes('beverage')) {
-      return 'Milk';
-    }
-    if (text.includes('juice') || text.includes('nectar') || text.includes('drink')) {
+    if (text.includes('juice') || text.includes('nectar') || text.includes('drink') || text.includes('soda') || text.includes('cola') || text.includes('beverage') || text.includes('carbonated')) {
       return 'Juice';
+    }
+    if (text.includes('milk') || text.includes('dairy') || text.includes('almond milk') || text.includes('soya milk')) {
+      return 'Milk';
     }
     if (text.includes('noodle') || text.includes('pasta') || text.includes('ramen') || text.includes('spaghetti')) {
       return 'Instant Noodles';

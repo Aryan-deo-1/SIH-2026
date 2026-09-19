@@ -114,6 +114,28 @@ export const api = {
   getComplianceResult: async (id: string) => {
     const res = await apiClient.get(`/compliance/results/${id}`);
     return res.data.data;
+  },
+
+  // 11. PackCheck AI Assistant
+  aiChat: async (payload: {
+    message: string;
+    conversation?: Array<{ role: 'user' | 'assistant'; content: string }>;
+    productId?: string;
+    language?: string;
+    userProfile?: any;
+  }) => {
+    const res = await apiClient.post('/ai/chat', payload);
+    return res.data;
+  },
+
+  getAIProductContext: async (productId: string) => {
+    const res = await apiClient.get(`/ai/context/${productId}`);
+    return res.data;
+  },
+
+  calculateNutrition: async (profile: any) => {
+    const res = await apiClient.post('/ai/calculate-nutrition', profile);
+    return res.data;
   }
 };
 

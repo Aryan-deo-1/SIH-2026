@@ -28,8 +28,10 @@ import {
   AlertTriangle,
   Scale,
   HeartPulse,
-  FileCheck2
+  FileCheck2,
+  Bot
 } from 'lucide-react';
+import { useAI } from '../context/AIContext';
 
 export const ProductDashboard: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -42,6 +44,7 @@ export const ProductDashboard: React.FC = () => {
   const [loading, setLoading] = useState(!data);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const { openChat } = useAI();
 
   useEffect(() => {
     if (!id) return;
@@ -125,6 +128,15 @@ export const ProductDashboard: React.FC = () => {
         </button>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => openChat(product.id, product.name, product.brand)}
+            className="inline-flex items-center gap-1.5 text-xs font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 px-3.5 py-1.5 rounded-xl shadow-xs transition-colors"
+          >
+            <Bot className="w-3.5 h-3.5 text-amber-700" />
+            <span>Ask PackCheck AI</span>
+            <Sparkles className="w-3 h-3 text-amber-600" />
+          </button>
           <button
             type="button"
             onClick={handleShare}
@@ -220,8 +232,17 @@ export const ProductDashboard: React.FC = () => {
             </div>
 
             {/* Verification Status Banner embedded in hero */}
-            <div className="pt-2">
+            <div className="pt-2 flex flex-wrap items-center gap-3">
               <VerificationBadge verification={product.verification} />
+              <button
+                type="button"
+                onClick={() => openChat(product.id, product.name, product.brand)}
+                className="inline-flex items-center gap-1.5 text-xs font-bold bg-gradient-to-r from-amber-50 to-amber-100 hover:from-amber-100 hover:to-amber-200 text-amber-900 px-3 py-1.5 rounded-xl border border-amber-300 shadow-xs transition-all"
+              >
+                <Bot className="w-3.5 h-3.5 text-amber-700" />
+                <span>Ask AI About This Product</span>
+                <Sparkles className="w-3 h-3 text-amber-600" />
+              </button>
             </div>
           </div>
         </div>

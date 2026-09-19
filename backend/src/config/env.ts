@@ -9,5 +9,7 @@ export const ENV = {
   JWT_SECRET: process.env.JWT_SECRET || 'packcheck_jwt_secret_dev_key_2025_secure',
   EXTERNAL_PRODUCT_API_URL: process.env.EXTERNAL_PRODUCT_API_URL || 'https://world.openfoodfacts.org/api/v2',
   EXTERNAL_PRODUCT_API_KEY: process.env.EXTERNAL_PRODUCT_API_KEY || '',
-  CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:5173'
+  CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:5173',
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
+  OPENAI_MODEL: process.env.OPENAI_MODEL || 'gpt-4o-mini'
 };

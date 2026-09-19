@@ -7,6 +7,7 @@ import compareRoutes from './routes/compare.routes';
 import historyRoutes from './routes/history.routes';
 import adminRoutes from './routes/admin.routes';
 import complianceRoutes from './routes/compliance.routes';
+import aiRoutes from './routes/ai.routes';
 import { errorHandler } from './middleware/error.middleware';
 import { dbService } from './services/db.service';
 
@@ -35,6 +36,7 @@ app.use('/api', compareRoutes);
 app.use('/api', historyRoutes);
 app.use('/api', adminRoutes);
 app.use('/api', complianceRoutes);
+app.use('/api', aiRoutes);
 
 // Centralized error handler
 app.use(errorHandler);

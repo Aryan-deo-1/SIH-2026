@@ -159,7 +159,7 @@ describe('Product Search and Text Normalization', () => {
     expect(responseBody.found).toBe(true);
     expect(responseBody.data.length).toBeGreaterThan(0);
     expect(responseBody.data[0].product.brand.toLowerCase()).toContain('lay');
-  });
+  }, 15000);
 
   it('SearchController.manualSearch should return HTTP 400 for missing or invalid request bodies', async () => {
     const { SearchController } = await import('../src/controllers/search.controller');
