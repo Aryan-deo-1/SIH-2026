@@ -52,3 +52,19 @@
 .animate-scan-line {
   animation: scan-laser 2.4s ease-in-out infinite;
 }
+
+/* Safe area support for notch and home indicator on modern mobile devices */
+.safe-pb {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.safe-pt {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Optimize touch interactions for standalone mobile PWA */
+@media (display-mode: standalone) {
+  body {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+

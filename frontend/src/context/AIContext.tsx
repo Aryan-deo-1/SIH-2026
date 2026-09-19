@@ -122,6 +122,18 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
+    if (!navigator.onLine) {
+      const offlineNotice: AIMessage = {
+        id: `offline-${Date.now()}`,
+        role: 'assistant',
+        content: "You're currently offline. PackCheck AI requires an internet connection to process queries. Please reconnect to the internet and try again.",
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages((prev) => [...prev, offlineNotice]);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       // Build conversation payload for backend
       const conversationHistory = messages

@@ -15,32 +15,39 @@ import { Preferences } from './pages/Preferences';
 import { Admin } from './pages/Admin';
 
 import { AIProvider } from './context/AIContext';
+import { PWAProvider } from './context/PWAContext';
 import { PackCheckAI } from './components/PackCheckAI';
+import { OfflineBanner } from './components/OfflineBanner';
+import { InstallModal } from './components/InstallModal';
 
 export const App: React.FC = () => {
   return (
     <BrowserRouter>
-      <AIProvider>
-        <div className="min-h-screen flex flex-col bg-[#FFFDFB]">
-          <Navbar />
-          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/scan" element={<Scanner />} />
-              <Route path="/processing" element={<Processing />} />
-              <Route path="/product/:id" element={<ProductDashboard />} />
-              <Route path="/search" element={<Search />} />
-              <Route path="/diet" element={<DietFinder />} />
-              <Route path="/compare" element={<Compare />} />
-              <Route path="/history" element={<History />} />
-              <Route path="/preferences" element={<Preferences />} />
-              <Route path="/admin" element={<Admin />} />
-            </Routes>
-          </main>
-          <Footer />
-          <PackCheckAI />
-        </div>
-      </AIProvider>
+      <PWAProvider>
+        <AIProvider>
+          <div className="min-h-screen flex flex-col bg-[#FFFDFB]">
+            <OfflineBanner />
+            <Navbar />
+            <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pb-20 md:pb-0">
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/scan" element={<Scanner />} />
+                <Route path="/processing" element={<Processing />} />
+                <Route path="/product/:id" element={<ProductDashboard />} />
+                <Route path="/search" element={<Search />} />
+                <Route path="/diet" element={<DietFinder />} />
+                <Route path="/compare" element={<Compare />} />
+                <Route path="/history" element={<History />} />
+                <Route path="/preferences" element={<Preferences />} />
+                <Route path="/admin" element={<Admin />} />
+              </Routes>
+            </main>
+            <Footer />
+            <PackCheckAI />
+            <InstallModal />
+          </div>
+        </AIProvider>
+      </PWAProvider>
     </BrowserRouter>
   );
 };

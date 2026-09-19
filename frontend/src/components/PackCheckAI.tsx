@@ -130,8 +130,8 @@ export const PackCheckAI: React.FC = () => {
 
   return (
     <>
-      {/* 1. Floating Action Button (Always visible unless chat is fully open on mobile) */}
-      <div className="fixed bottom-5 right-5 z-40">
+      {/* 1. Floating Action Button (Positioned safely above bottom nav on mobile) */}
+      <div className="fixed bottom-20 sm:bottom-5 right-4 sm:right-5 z-40">
         {!isOpen ? (
           <button
             type="button"

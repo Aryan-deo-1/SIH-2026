@@ -11,12 +11,15 @@ import {
   Sparkles,
   SlidersHorizontal,
   Settings,
-  Scale
+  Scale,
+  Download
 } from 'lucide-react';
+import { usePWA } from '../context/PWAContext';
 
 export const Navbar: React.FC = () => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { isInstallable, isInstalled, isIOS, installApp } = usePWA();
 
   const navLinks = [
     { name: 'Home', path: '/', icon: ShieldCheck },
@@ -92,6 +95,18 @@ export const Navbar: React.FC = () => {
               >
                 <Settings className="w-4 h-4" />
               </Link>
+              {(isInstallable || (isIOS && !isInstalled)) && (
+                <button
+                  type="button"
+                  onClick={installApp}
+                  className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white px-3 py-2 rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-95 cursor-pointer"
+                  title="Install PackCheck App"
+                  aria-label="Install PackCheck App"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Install App</span>
+                </button>
+              )}
               <Link
                 to="/scan"
                 className="flex items-center gap-2 bg-brand-primary-orange hover:bg-brand-hover-orange text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-soft hover:shadow-soft-hover transition-all active:scale-95"
@@ -103,6 +118,18 @@ export const Navbar: React.FC = () => {
 
             {/* Mobile Hamburger Button */}
             <div className="flex md:hidden items-center gap-2">
+              {(isInstallable || (isIOS && !isInstalled)) && (
+                <button
+                  type="button"
+                  onClick={installApp}
+                  className="flex items-center gap-1 bg-amber-50 text-amber-900 border border-amber-300 px-2.5 py-1 rounded-lg text-xs font-semibold shadow-2xs"
+                  title="Install PackCheck"
+                  aria-label="Install App"
+                >
+                  <Download className="w-3.5 h-3.5 text-brand-primary-orange" />
+                  <span>Install</span>
+                </button>
+              )}
               <Link
                 to="/scan"
                 className="flex items-center gap-1.5 bg-brand-primary-orange text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm"
@@ -143,6 +170,19 @@ export const Navbar: React.FC = () => {
                 </Link>
               );
             })}
+            {(isInstallable || (isIOS && !isInstalled)) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  installApp();
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold bg-gradient-to-r from-amber-50 to-amber-100/80 text-amber-900 border border-amber-300 my-1"
+              >
+                <Download className="w-4 h-4 text-brand-primary-orange" />
+                <span>Install PackCheck Mobile App</span>
+              </button>
+            )}
             <div className="pt-2 border-t border-brand-border/60 flex items-center justify-around">
               <Link
                 to="/preferences"
@@ -166,7 +206,7 @@ export const Navbar: React.FC = () => {
       </header>
 
       {/* Mobile Sticky Bottom Navigation Bar for High-Frequency Actions */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-brand-border px-2 py-1.5 shadow-[0_-4px_16px_rgba(0,0,0,0.04)]">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-brand-border px-2 pt-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom,0px))] shadow-[0_-4px_16px_rgba(0,0,0,0.04)]">
         <div className="grid grid-cols-5 items-center justify-around text-center">
           <Link
             to="/"
