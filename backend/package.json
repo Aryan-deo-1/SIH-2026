@@ -4,7 +4,7 @@
   "description": "PackCheck - Backend REST API (Node.js + Express + TypeScript + Prisma)",
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc",
+    "build": "prisma generate && tsc",
     "start": "node dist/server.js",
     "dev": "nodemon --watch src --exec ts-node src/server.ts",
     "prisma:generate": "prisma generate",
