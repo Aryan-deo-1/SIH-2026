@@ -25,5 +25,8 @@
     "product-checker"
   ],
   "author": "PackCheck Team",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "typescript": "^7.0.2"
+  }
 }
