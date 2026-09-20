@@ -219,7 +219,7 @@ class ResilientDatabaseService {
 
         if (list.length > 0) {
           // Sort by relevance score
-          return list.sort((a, b) => {
+          return list.sort((a: typeof list[number], b: typeof list[number]) => {
             const scoreA = NormalizationService.scoreProductMatch(rawClean, a);
             const scoreB = NormalizationService.scoreProductMatch(rawClean, b);
             return scoreB - scoreA;
