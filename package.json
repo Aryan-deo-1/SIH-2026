@@ -4,12 +4,14 @@
   "description": "PackCheck - Package & Commodity Compliance Checker",
   "scripts": {
     "install:all": "npm install && npm --prefix backend install && npm --prefix frontend install",
+    "postinstall": "npm --prefix backend install && npm --prefix frontend install",
     "dev:backend": "npm --prefix backend run dev",
     "dev:frontend": "npm --prefix frontend run dev",
     "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"yellow.bold,cyan.bold\" \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "build:backend": "npm --prefix backend ci --include=dev && npm --prefix backend run build",
-    "build:frontend": "npm --prefix frontend ci --include=dev && npm --prefix frontend run build",
+    "build:backend": "npm --prefix backend run build",
+    "build:frontend": "npm --prefix frontend run build",
     "build": "npm run build:backend && npm run build:frontend",
+    "start": "npm --prefix backend start",
     "test:backend": "npm --prefix backend test",
     "test": "npm run test:backend"
   },
