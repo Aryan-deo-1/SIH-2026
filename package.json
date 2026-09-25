@@ -3,13 +3,13 @@
   "version": "1.0.0",
   "description": "PackCheck - Package & Commodity Compliance Checker",
   "scripts": {
-    "install:all": "npm install && npm --prefix backend install && npm --prefix frontend install",
-    "postinstall": "npm --prefix backend install && npm --prefix frontend install",
+    "install:all": "npm install && npm --prefix backend install --include=dev && npm --prefix frontend install --include=dev",
+    "postinstall": "npm --prefix backend install --include=dev && npm --prefix frontend install --include=dev",
     "dev:backend": "npm --prefix backend run dev",
     "dev:frontend": "npm --prefix frontend run dev",
     "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"yellow.bold,cyan.bold\" \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "build:backend": "npm --prefix backend run build",
-    "build:frontend": "npm --prefix frontend run build",
+    "build:backend": "npm --prefix backend install --include=dev && npm --prefix backend run build",
+    "build:frontend": "npm --prefix frontend install --include=dev && npm --prefix frontend run build",
     "build": "npm run build:backend",
     "build:all": "npm run build:backend && npm run build:frontend",
     "start": "npm --prefix backend start",
@@ -28,8 +28,5 @@
     "product-checker"
   ],
   "author": "PackCheck Team",
-  "license": "MIT",
-  "dependencies": {
-    "typescript": "^7.0.2"
-  }
+  "license": "MIT"
 }
