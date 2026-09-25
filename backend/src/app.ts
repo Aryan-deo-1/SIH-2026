@@ -14,13 +14,29 @@ import { dbService } from './services/db.service';
 
 export const app = express();
 
+// Trust proxy for proper IP & protocol resolution behind Cloudflare / InHank edge routers
+app.set('trust proxy', 1);
+
+// Production-safe HTTP request logger (runs BEFORE CORS and routers to record all incoming traffic)
+app.use((req, res, next) => {
+  const start = Date.now();
+  console.log(`[HTTP Incoming] ${req.method} ${req.originalUrl}`);
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    console.log(`[HTTP Completed] ${req.method} ${req.originalUrl} ${res.statusCode} (${duration}ms)`);
+  });
+  next();
+});
+
 // Allowed CORS origins
 const allowedOrigins = [
   'https://packchecking.netlify.app',
   'http://localhost:5173',
   'http://localhost:3000',
   'http://localhost:5000',
+  'http://localhost:8080',
   'http://127.0.0.1:5173',
+  'http://127.0.0.1:3000',
   ...(ENV.CLIENT_URL ? [ENV.CLIENT_URL.replace(/\/+$/, '')] : []),
   ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL.replace(/\/+$/, '')] : []),
   ...(process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(o => o.trim().replace(/\/+$/, '')) : [])
@@ -28,14 +44,19 @@ const allowedOrigins = [
 
 const uniqueAllowedOrigins = Array.from(new Set(allowedOrigins.filter(Boolean)));
 
-// Middlewares
+// CORS Middleware
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
+      // Allow requests with no origin (e.g. mobile apps, curl, server-to-server, InHank internal probes)
       if (!origin) return callback(null, true);
       const normalizedOrigin = origin.replace(/\/+$/, '');
-      if (uniqueAllowedOrigins.includes(normalizedOrigin) || uniqueAllowedOrigins.includes('*')) {
+      if (
+        uniqueAllowedOrigins.includes(normalizedOrigin) ||
+        uniqueAllowedOrigins.includes('*') ||
+        /^https:\/\/[a-z0-9-]+--packchecking\.netlify\.app$/.test(normalizedOrigin) ||
+        normalizedOrigin === 'https://packchecking.netlify.app'
+      ) {
         return callback(null, true);
       }
       // Permissive in non-production
@@ -50,17 +71,6 @@ app.use(
   })
 );
 
-// Production-safe HTTP request logger (does not log headers, secrets, or payloads)
-app.use((req, res, next) => {
-  const start = Date.now();
-  const { method, originalUrl } = req;
-  res.on('finish', () => {
-    const duration = Date.now() - start;
-    console.log(`[HTTP] ${method} ${originalUrl} ${res.statusCode} (${duration}ms)`);
-  });
-  next();
-});
-
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
@@ -72,8 +82,17 @@ app.get('/', (_req, res) => {
   });
 });
 
-// Health Check
-app.get('/api/health', async (_req, res) => {
+// API base endpoint
+app.get('/api', (_req, res) => {
+  res.json({
+    service: 'PackCheck Backend API',
+    status: 'RUNNING',
+    health: '/api/health'
+  });
+});
+
+// Health Check (supports /api/health and standard container platform probes /health, /healthz)
+app.get(['/api/health', '/health', '/healthz'], async (_req, res) => {
   res.json({
     status: 'HEALTHY',
     service: 'PackCheck Backend API',

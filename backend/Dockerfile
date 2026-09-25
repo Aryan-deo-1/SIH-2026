@@ -24,9 +24,10 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
-EXPOSE 5000
+EXPOSE 8080 5000
 
-ENV PORT=5000
+ENV PORT=8080
+ENV HOST=0.0.0.0
 ENV NODE_ENV=production
 
 CMD ["node", "dist/server.js"]

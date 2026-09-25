@@ -10,7 +10,8 @@
     "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"yellow.bold,cyan.bold\" \"npm run dev:backend\" \"npm run dev:frontend\"",
     "build:backend": "npm --prefix backend run build",
     "build:frontend": "npm --prefix frontend run build",
-    "build": "npm run build:backend && npm run build:frontend",
+    "build": "npm run build:backend",
+    "build:all": "npm run build:backend && npm run build:frontend",
     "start": "npm --prefix backend start",
     "test:backend": "npm --prefix backend test",
     "test": "npm run test:backend"
