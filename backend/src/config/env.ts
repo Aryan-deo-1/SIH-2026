@@ -3,7 +3,7 @@ dotenv.config();
 
 const parsePort = (portVal?: string): number => {
   const parsed = Number(portVal);
-  return !isNaN(parsed) && parsed > 0 ? parsed : 8080;
+  return !isNaN(parsed) && parsed > 0 ? parsed : 5000;
 };
 
 export const ENV = {
